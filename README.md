@@ -16,6 +16,10 @@ when open a `.md` file, you can click `show preview` in the editor toolbar to ac
 
 ## Release Notes
 
+### 0.0.3
+
+fix img parsing error (relative path), using `onDidChangeTextDocument` instead of `setInterval`
+
 ### 0.0.2
 
 optimize package size, and fix img parsing error

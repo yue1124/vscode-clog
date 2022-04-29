@@ -31,10 +31,12 @@ function getNonce() {
 	return text;
 }
 
-function getWebviewHTML(webview: vscode.Webview, extensionPath: string) {
+function getWebviewHTML(webview: vscode.Webview, extensionPath: string, baseUri: vscode.Uri) {
 
 	const appJsOnDisk = vscode.Uri.file(path.join(extensionPath, 'statics', 'app.umd.js'));
 	const appJsSrc = webview.asWebviewUri(appJsOnDisk);
+
+	const baseSrc = webview.asWebviewUri(baseUri);
 
 	const nonce = getNonce();
 
@@ -43,9 +45,10 @@ function getWebviewHTML(webview: vscode.Webview, extensionPath: string) {
 			<head>
 				<meta charset="UTF-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}' 'unsafe-eval';">
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' ${webview.cspSource} https:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}' 'unsafe-eval';">
 				<script defer nonce="${nonce}" src="${appJsSrc}"></script>
 				<title>Markdown Preview</title>
+				<base href="${baseSrc}" />
 			</head>
 			<body>
 				<div id="app"></div>
@@ -56,6 +59,15 @@ function getWebviewHTML(webview: vscode.Webview, extensionPath: string) {
 			</html>`;
 }
 
+const updateContent = (textDocument: vscode.TextDocument, previewPanel: vscode.WebviewPanel) => {
+	if (textDocument.isClosed) {
+		previewPanel.dispose();
+		return;
+	}
+	const [frontMatter, content] = getFrontMatterAndContent(textDocument.getText());
+	previewPanel.webview.postMessage({ frontMatter, content });
+};
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -63,57 +75,72 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "clog" is now active!');
-
-	let previewPanel: vscode.WebviewPanel | undefined = undefined;
-	let previewTextEditor: vscode.TextEditor | undefined = undefined;
+	
+	let textDocument: vscode.TextDocument | undefined = undefined;
+	let webviewPanel: vscode.WebviewPanel | undefined = undefined;
 	const commandShowPreview = "clog.showPreview";
 
 	const commandShowPreviewHandler = () => {
-
-		const columnToShowIn = (previewPanel && previewPanel.viewColumn) || vscode.ViewColumn.Two;
-		const textDocument = (previewTextEditor && previewTextEditor.document) || vscode.window.activeTextEditor?.document;
-
+		textDocument = vscode.window.activeTextEditor?.document;
 		if (textDocument === undefined) {
-			console.log("no activated text document");
+			console.log('no activated text document');
 			return;
 		}
 
-		if (previewPanel) {
-			previewPanel.reveal(columnToShowIn);
+		if (webviewPanel) {
+			webviewPanel.reveal(webviewPanel.viewColumn);
 		} else {
-			previewPanel = vscode.window.createWebviewPanel(
+			let localResourceRoots = [vscode.Uri.file(context.extensionPath)];
+			const workspaceFolders = vscode.workspace.workspaceFolders;
+			for (let workspaceFolder of workspaceFolders || []) {
+				localResourceRoots.push(workspaceFolder.uri);
+			}
+
+			webviewPanel = vscode.window.createWebviewPanel(
 				'mdPreview',
 				'Markdown Preview',
-				columnToShowIn,
+				vscode.ViewColumn.Two,
 				{
 					enableScripts: true,
-					localResourceRoots: [vscode.Uri.file(context.extensionPath)]
+					localResourceRoots,
 				}
 			);
 
-			previewPanel.webview.html = getWebviewHTML(previewPanel.webview, context.extensionPath);
-
-			const updateContent = (textDocument: vscode.TextDocument, previewPanel: vscode.WebviewPanel) => {
-				if (textDocument.isClosed) {
-					previewPanel.dispose();
-					return;
+			const onDidChangeTextDocument = vscode.workspace.onDidChangeTextDocument( event => {
+				if (textDocument && webviewPanel && textDocument === event.document) {
+					updateContent(textDocument, webviewPanel);
 				}
-				const [frontMatter, content] = getFrontMatterAndContent(textDocument.getText());
-				previewPanel.webview.postMessage({ frontMatter, content });
-			};
-			updateContent(textDocument, previewPanel);
-			const interval = setInterval(updateContent, 100, textDocument, previewPanel);
+			});
 
-			previewPanel.onDidDispose(
+			const onDidCloseTextDocument = vscode.workspace.onDidCloseTextDocument( document => {
+				if (textDocument && webviewPanel && textDocument === document) {
+					webviewPanel.dispose();
+				}
+			});
+
+			const onDidChangeTextEditor = vscode.window.onDidChangeActiveTextEditor( textEditor => {
+				const document = textEditor?.document;
+				if(document && document.uri.scheme === 'file' && document.uri.path.endsWith('.md') && webviewPanel) {
+					textDocument = document;
+					webviewPanel.webview.html = getWebviewHTML(webviewPanel.webview, context.extensionPath, textDocument.uri);
+					updateContent(textDocument, webviewPanel);
+				}
+			});
+
+			webviewPanel.onDidDispose(
 				() => {
-					clearInterval(interval);
-					previewPanel = undefined;
+					onDidChangeTextDocument.dispose();
+					onDidCloseTextDocument.dispose();
+					onDidChangeTextEditor.dispose();
+					webviewPanel = undefined;
 				},
 				null,
 				context.subscriptions
 			);
 		}
 
+		webviewPanel.webview.html = getWebviewHTML(webviewPanel.webview, context.extensionPath, textDocument.uri);
+		updateContent(textDocument, webviewPanel);
 	};
 
 	context.subscriptions.push(vscode.commands.registerCommand(commandShowPreview, commandShowPreviewHandler));
