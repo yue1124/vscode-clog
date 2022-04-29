@@ -16,6 +16,10 @@ when open a `.md` file, you can click `show preview` in the editor toolbar to ac
 
 ## Release Notes
 
+### 0.0.2
+
+optimize package size, and fix img parsing error
+
 ### 0.0.1
 
 basic version, with real-time markdown preview with front matter 
