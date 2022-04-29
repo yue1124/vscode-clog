@@ -33,14 +33,8 @@ function getNonce() {
 
 function getWebviewHTML(webview: vscode.Webview, extensionPath: string) {
 
-	const nmdJsOnDisk = vscode.Uri.file(path.join(extensionPath, 'statics', 'n-markdown.umd.js'));
-	const nmdJsSrc = webview.asWebviewUri(nmdJsOnDisk);
-
-	const vue3JsOnDisk = vscode.Uri.file(path.join(extensionPath, 'statics', 'vue.global.prod.js'));
-	const vue3JsSrc = webview.asWebviewUri(vue3JsOnDisk);
-
-	const commonmarkJsOnDisk = vscode.Uri.file(path.join(extensionPath, 'statics', 'commonmark.min.js'));
-	const commonmarkJsSrc = webview.asWebviewUri(commonmarkJsOnDisk);
+	const appJsOnDisk = vscode.Uri.file(path.join(extensionPath, 'statics', 'app.umd.js'));
+	const appJsSrc = webview.asWebviewUri(appJsOnDisk);
 
 	const nonce = getNonce();
 
@@ -50,31 +44,13 @@ function getWebviewHTML(webview: vscode.Webview, extensionPath: string) {
 				<meta charset="UTF-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}' 'unsafe-eval';">
-				<script defer nonce="${nonce}" src="${vue3JsSrc}"></script>
-				<script defer nonce="${nonce}" src="${commonmarkJsSrc}"></script>
-				<script defer nonce="${nonce}" src="${nmdJsSrc}"></script>
+				<script defer nonce="${nonce}" src="${appJsSrc}"></script>
 				<title>Markdown Preview</title>
 			</head>
 			<body>
-				<div id="app">
-					<n-container>
-						<template #frontmatter>
-							<n-frontmatter :front-matter="frontMatter" />
-						</template>
-						<n-markdown :content="content" style="padding-top= 24px;"/>
-					</n-container>
-				</div>
+				<div id="app"></div>
 				<script nonce="${nonce}" type="module">
-					const vscode = acquireVsCodeApi();
-					const vm = Vue.createApp({
-						data() {
-							return {content: "", frontMatter: ""}
-						}
-					}).use(NMarkdown.default).mount('#app');
-					window.addEventListener('message', event => {
-						vm.frontMatter = event.data.frontMatter;
-						vm.content = event.data.content;
-					})
+					run("#app")
 				</script>
 			</body>
 			</html>`;
