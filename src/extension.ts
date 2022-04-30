@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as moment from 'moment';
 
 function getFrontMatterAndContent(text: string) {
 	if (text.startsWith('+++')) {
@@ -74,8 +75,8 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "clog" is now active!');
-	
+	// console.log('Congratulations, your extension "clog" is now active!');
+
 	let textDocument: vscode.TextDocument | undefined = undefined;
 	let webviewPanel: vscode.WebviewPanel | undefined = undefined;
 	const commandShowPreview = "clog.showPreview";
@@ -144,6 +145,49 @@ export function activate(context: vscode.ExtensionContext) {
 	};
 
 	context.subscriptions.push(vscode.commands.registerCommand(commandShowPreview, commandShowPreviewHandler));
+
+	const onMarkdownSave = vscode.workspace.onDidSaveTextDocument( document => {
+		if(document.languageId === 'markdown') {
+			const clogConfigs = vscode.workspace.getConfiguration('clog');
+			const updateFrontMatter = clogConfigs.get('updateFrontMatterOnSave');
+			const createFrontMatter = clogConfigs.get('createFrontMatterOnSave');
+
+			const [frontMatter, content] = getFrontMatterAndContent(document.getText());
+
+			if (frontMatter && updateFrontMatter) {
+				let lines = frontMatter.split('\n');
+				let idx = 0;
+				for (; idx < lines.length; ++idx) {
+					if (lines[idx].startsWith('last_modified = ')) {
+						break;
+					}
+				}
+				const lineOfLastModified = `last_modified = "${moment().format('YYYY-MM-DD HH:mm:ss')}"`;
+				if (idx === lines.length) {
+					lines[lines.length - 1] = lineOfLastModified;
+					lines.push('');
+				} else {
+					lines[idx] = lineOfLastModified;
+				}
+				const newFrontMatter = lines.join('\n');
+				vscode.workspace.fs.writeFile(document.uri, Buffer.from(`+++\n${newFrontMatter}+++\n${content}`));
+			} else if (createFrontMatter) {
+				let lines = [''];
+				lines.push(`last_modified = "${moment().format('YYYY-MM-DD HH:mm:ss')}"`);
+				lines.push(`created = "${moment().format('YYYY-MM-DD HH:mm:ss')}"`);
+				lines.push(`tags = ["tagName"]`);
+				lines.push(`description = "introduction"`);
+				lines.push(`title = "${document.fileName}"`);
+
+				lines.reverse();
+
+				const newFrontMatter = lines.join('\n');
+				vscode.workspace.fs.writeFile(document.uri, Buffer.from(`+++\n${newFrontMatter}+++\n${content}`));	
+			}
+		}
+	});
+
+	context.subscriptions.push(onMarkdownSave);
 }
 
 // this method is called when your extension is deactivated

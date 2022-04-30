@@ -13,13 +13,30 @@
 	},
 	"icon": "statics/icon.png",
 	"categories": [
+		"Snippets",
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:clog.showPreview"
+		"onCommand:clog.showPreview",
+		"onLanguage:markdown"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
+		"configuration": {
+			"title": "Clog",
+			"properties": {
+				"clog.updateFrontMatterOnSave": {
+					"type": "boolean",
+					"default": true,
+					"description": "auto update front matter's information on saving markdown file."
+				},
+				"clog.createFrontMatterOnSave": {
+					"type": "boolean",
+					"default": false,
+					"description": "add front matter for markdown file on saving it."
+				}
+			}
+		},
 		"commands": [
 			{
 				"command": "clog.showPreview",
@@ -35,7 +52,13 @@
 					"group": "navigation"
 				}
 			]
-		}
+		},
+		"snippets": [
+			{
+				"language": "markdown",
+				"path": "./snippets/markdown.json"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
@@ -46,16 +69,17 @@
 		"test": "node ./out/test/runTest.js"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.66.0",
 		"@types/glob": "^7.2.0",
 		"@types/mocha": "^9.1.0",
 		"@types/node": "14.x",
+		"@types/vscode": "^1.66.0",
 		"@typescript-eslint/eslint-plugin": "^5.16.0",
 		"@typescript-eslint/parser": "^5.16.0",
+		"@vscode/test-electron": "^2.1.3",
 		"eslint": "^8.11.0",
 		"glob": "^7.2.0",
 		"mocha": "^9.2.2",
-		"typescript": "^4.5.5",
-		"@vscode/test-electron": "^2.1.3"
+		"moment": "^2.29.3",
+		"typescript": "^4.5.5"
 	}
 }
