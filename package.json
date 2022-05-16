@@ -3,7 +3,7 @@
 	"publisher": "bigyue",
 	"displayName": "Bigyue's Clog Support",
 	"description": "A Markdown Preview with Front Matter for bigyue.cn",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"engines": {
 		"vscode": "^1.66.0"
 	},
