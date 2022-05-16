@@ -151,38 +151,42 @@ export function activate(context: vscode.ExtensionContext) {
 			const clogConfigs = vscode.workspace.getConfiguration('clog');
 			const updateFrontMatter = clogConfigs.get('updateFrontMatterOnSave');
 			const createFrontMatter = clogConfigs.get('createFrontMatterOnSave');
-
+			const fieldLastModified: string = clogConfigs.get('fieldOfModifiedTime') || "time_modify";
+			const fieldCreated: string = clogConfigs.get("fileOfCreatedTime") || "time_create";
 			const [frontMatter, content] = getFrontMatterAndContent(document.getText());
 
-			if (frontMatter && updateFrontMatter) {
-				let lines = frontMatter.split('\n');
-				let idx = 0;
-				for (; idx < lines.length; ++idx) {
-					if (lines[idx].startsWith('last_modified = ')) {
-						break;
+			if(frontMatter) {
+				if(updateFrontMatter) {
+					let lines = frontMatter.split('\n');
+					let idx = 0;
+					for (; idx < lines.length; ++idx) {
+						if (lines[idx].startsWith(fieldLastModified)) {
+							break;
+						}
 					}
-				}
-				const lineOfLastModified = `last_modified = "${moment().format('YYYY-MM-DD HH:mm:ss')}"`;
-				if (idx === lines.length) {
-					lines[lines.length - 1] = lineOfLastModified;
-					lines.push('');
-				} else {
+					if(idx === lines.length) {
+						return;
+					}
+
+					const lineOfLastModified = `${fieldLastModified} = "${moment().format('YYYY-MM-DD HH:mm:ss')}"`;
 					lines[idx] = lineOfLastModified;
+					const newFrontMatter = lines.join('\n');
+					vscode.workspace.fs.writeFile(document.uri, Buffer.from(`+++\n${newFrontMatter}+++\n${content}`));
 				}
-				const newFrontMatter = lines.join('\n');
-				vscode.workspace.fs.writeFile(document.uri, Buffer.from(`+++\n${newFrontMatter}+++\n${content}`));
-			} else if (createFrontMatter) {
-				let lines = [''];
-				lines.push(`last_modified = "${moment().format('YYYY-MM-DD HH:mm:ss')}"`);
-				lines.push(`created = "${moment().format('YYYY-MM-DD HH:mm:ss')}"`);
-				lines.push(`tags = ["tagName"]`);
-				lines.push(`description = "introduction"`);
-				lines.push(`title = "${document.fileName}"`);
+			} else {
+				if(createFrontMatter) {
+					let lines = [''];
+					lines.push(`${fieldLastModified} = "${moment().format('YYYY-MM-DD HH:mm:ss')}"`);
+					lines.push(`${fieldCreated} = "${moment().format('YYYY-MM-DD HH:mm:ss')}"`);
+					lines.push(`tags = ["tagName"]`);
+					lines.push(`description = "introduction"`);
+					lines.push(`title = "${document.fileName}"`);
 
-				lines.reverse();
+					lines.reverse();
 
-				const newFrontMatter = lines.join('\n');
-				vscode.workspace.fs.writeFile(document.uri, Buffer.from(`+++\n${newFrontMatter}+++\n${content}`));	
+					const newFrontMatter = lines.join('\n');
+					vscode.workspace.fs.writeFile(document.uri, Buffer.from(`+++\n${newFrontMatter}+++\n${content}`));		
+				}
 			}
 		}
 	});

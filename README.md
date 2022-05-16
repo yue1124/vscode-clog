@@ -18,8 +18,8 @@ if markdown file start with a front matter block, such as
 
 ```
 +++
-title: This is a front matter
-description: introduction
+title = This is a front matter
+description = introduction
 +++
 
 markdown content
@@ -27,11 +27,17 @@ markdown content
 
 it will not be parse as an part of markdown, instead it will be shown as a code block at the top of the markdown preview.
 
+In bigyuecn, we using `TOML` for front matter, not `YAML`. Thus, you can see `=`, not `:` in front matter.
+
 ### Auto update Front Matter on save
 
-some information contained in front matter needs update when saving a markdown file, such as property `last_modified`.
+some information contained in front matter needs update when saving a markdown file, such as property `last_modified`. The name of this field can be configure in `clog.fieldOfModifiedTime`, this property is null if you do not change it, then the field name will be `time_modify` on default.
 
 ## Release Notes
+
+### 0.0.5
+
+add configuration `fieldOfCreatedTime` and `fieldOfModifiedTime`, fix some logic when updating frontmatter's information.
 
 ### 0.0.4
 
