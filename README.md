@@ -35,6 +35,10 @@ some information contained in front matter needs update when saving a markdown f
 
 ## Release Notes
 
+### 0.0.7
+
+update snippet `insert front matter`
+
 ### 0.0.6
 
 add configuration `fieldOfCreatedTime` and `fieldOfModifiedTime`, fix some logic when updating frontmatter's information.
